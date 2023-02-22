@@ -44,7 +44,7 @@ jobs:
           
           
       - name: execute py 
-        run: python STR2.py 
+        run: python threads_viewer.py
         
         
       - name: Git Add
