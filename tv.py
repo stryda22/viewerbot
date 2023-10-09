@@ -9,10 +9,9 @@ import linecache
 
 from threading import Thread
 
-channel_url = "https://www.twitch.tv/stryda22"
+channel_url = "https://www.twitch.tv/HaleySuccs"
 proxies_file = "good_proxy.txt"
-processes = []
-max_nb_of_threads = 3000
+max_nb_of_threads = 4096
 
 all_proxies = []
 nb_of_proxies = 0
@@ -32,10 +31,7 @@ class ViewerBot:
         line = linecache.getline(filename, lineno, f.f_globals)
         print('EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj))
 
-
-
     def get_proxies(self):
-        # Reading the list of proxies
         global nb_of_proxies
         try:
             lines = [line.rstrip("\n") for line in open(proxies_file)]
@@ -46,23 +42,20 @@ class ViewerBot:
         nb_of_proxies = len(lines)
         return lines
 
-
     def get_url(self):
         url = ""
         try:
             streams = session.streams(self.channel_url)
             try:
                 url = streams['audio_only'].url
-                print(f"URL : {url[:30]}...\n")
             except:
                 url = streams['worst'].url
-                print(f"URL : {url[:30]}...\n")
 
         except:
             pass
         return url
 
-    def open_url(self,proxy_data):
+    def open_url(self, proxy_data):
         try:
             global all_proxies
             headers = {'User-Agent': ua.random}
@@ -72,19 +65,17 @@ class ViewerBot:
                 proxy_data['url'] = self.get_url()
             current_url = proxy_data['url']
             try:
-                 if time.time() - proxy_data['time'] >= random.randint(1, 5):
+                if time.time() - proxy_data['time'] >= random.randint(1, 5):
                     current_proxy = {"http": proxy_data['proxy'], "https": proxy_data['proxy']}
                     with requests.Session() as s:
                         response = s.head(current_url, proxies=current_proxy, headers=headers)
-                    print(f"Sent HEAD request with {current_proxy['http']} | {response.status_code} | {response.request} | {response}")
                     proxy_data['time'] = time.time()
                     all_proxies[current_index] = proxy_data
             except:
-                print("Connection Error!")
+                pass
 
         except (KeyboardInterrupt, SystemExit):
             sys.exit()
-
 
     def mainmain(self):
         self.channel_url = "https://www.twitch.tv/" + sys.argv[1]
@@ -93,21 +84,23 @@ class ViewerBot:
         for p in proxies:
             all_proxies.append({'proxy': p, 'time': time.time(), 'url': ""})
 
-        shuffle(all_proxies)
-        list_of_all_proxies = all_proxies
-        current_proxy_index = 0
-
         while True:
-            try:
-                for i in range(0, max_nb_of_threads):
-                    threaded = Thread(target=self.open_url, args=(all_proxies[random.randint(0, len(all_proxies))],))
-                    threaded.daemon = True  # This thread dies when main thread (only non-daemon thread) exits.
-                    threaded.start()
-            except:
-                self.print_exception()
-            shuffle(all_proxies)
-            time.sleep(5)
+            start_time = time.time()
+            while time.time() - start_time < 15:
+                try:
+                    for i in range(0, max_nb_of_threads):
+                        threaded = Thread(target=self.open_url, args=(all_proxies[random.randint(0, len(all_proxies) - 1)],))
+                        threaded.daemon = True
+                        threaded.start()
+                except:
+                    self.print_exception()
+                shuffle(all_proxies)
+                time.sleep(5)
 
+            proxies = self.get_proxies()
+            all_proxies.clear()
+            for p in proxies:
+                all_proxies.append({'proxy': p, 'time': time.time(), 'url': ""})
 
-ViewerBot = ViewerBot()
-ViewerBot.mainmain()
+if __name__ == "__main__":
+    ViewerBot().mainmain()
